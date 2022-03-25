@@ -4,7 +4,7 @@ import AccountService from '../database/Service/AccountServices'
 import EvaluateFunction from './EvaluateFunction';
 dotenv.config();
 
-// const { NIMO_USERNAME, NIMO_PASSWORD } = process.env;
+const { HEADLESS } = process.env;
 export class NimoGifter {
   browers: Browser[] = [];
   browser: Browser | null = null;
@@ -15,7 +15,7 @@ export class NimoGifter {
   dataDir = './data';
   init = async (username: string = '0387976385', password: string = 'pewpewabcabc111') => {
     this.browser = await puppeteer.launch({
-      headless: false,
+      headless: HEADLESS == "true" ? true : false,
       handleSIGINT: true,
       handleSIGHUP: true,
       handleSIGTERM: true,
@@ -76,13 +76,22 @@ export class NimoGifter {
 
   }
 
-  takeGift = async (link?: string) => {
-    console.log("Open New Tab: ", link)
+
+  logTime = () => {
+    var today = new Date();
+    var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+    var dateTime = '<' + date + ' ' + time + '>';
+    return dateTime
+  }
+
+  takeGift = async (index: number, thread: number, link?: string) => {
+    console.log(`[${index} - ${thread}] ${this.logTime()} Open New Tab: `, link)
     if (!link) return
     if (!this.browser) throw new Error('Not found browser');
     const cookies = await this.mainPage!.cookies();
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: HEADLESS == "true" ? true : false,
       handleSIGINT: true,
       handleSIGHUP: true,
       handleSIGTERM: true,
@@ -123,10 +132,14 @@ export class NimoGifter {
     //   }
     // })
     this.listIgnore.push(link);
-    console.log("Bắt đầu vòng 1 tại ", link)
+    console.log(`[${index} - ${thread}] ${this.logTime()} Bắt đầu vòng 1 tại `, link)
     let evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
+    let beforeEgg = evaluateEgg.eggLeft
     while (evaluateEgg.hasEgg && evaluateEgg.delayTime) {
-      console.log("Kết quả vòng trước ", evaluateEgg)
+      if (beforeEgg != evaluateEgg.eggLeft) {
+        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, evaluateEgg)
+      }
+
       await page.waitForTimeout(evaluateEgg.delayTime * 1000)
       // console.log("Bắt đầu vòng mới tại ", link)
       evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
@@ -136,7 +149,6 @@ export class NimoGifter {
     await browser.close();
 
   }
-
 
 
   autoScroll = async () => {

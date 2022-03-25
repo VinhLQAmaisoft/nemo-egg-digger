@@ -19,7 +19,7 @@ export default {
             console.log("Evaluate Egg")
             const boxGift = document.querySelector('.nimo-room__chatroom__box-gift-item');
             console.log("Step 1: Have Egg = ", boxGift)
-            let delayTime = 10
+            let delayTime = 5
             if (!boxGift) {
                 return {
                     hasEgg: false,
@@ -33,8 +33,11 @@ export default {
             if (openBtn != null) {
                 console.log("Step 3: Open Egg !!!",)
                 openBtn.click();
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
                 eggLeft--
-                delayTime = 40
+                delayTime = 7
             }
             console.log("Step 4: Wait For Egg = ", delayTime * 1000)
             return {
@@ -47,7 +50,7 @@ export default {
             return {
                 hasEgg: false,
                 eggLeft: 0,
-                delayTime: 10
+                delayTime: 5
             }
         }
     },
