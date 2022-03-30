@@ -10,7 +10,8 @@ const start1Round = async (index: number, nimoGifter: NimoGifter) => {
     availableJob.forEach(job => { listLink.push(job.channel) })
     console.log(`${logTime()}Job Found: `, listLink.length)
     let thread = 1;
-    for await (const link of listLink) {
+    for (let i = 0; i < listLink.length; i++) {
+      const link = listLink[i];
       currentJob.push(nimoGifter.takeGift(index, thread, link).catch(console.log))
       thread++
       await sleep(5000)
@@ -21,14 +22,12 @@ const start1Round = async (index: number, nimoGifter: NimoGifter) => {
       }
     }
     console.log(`${logTime()} Hoàn thiện nốt các job ${currentJob.length}/${MAX_JOB}`)
-    console.log(`${logTime()} Kết thúc một vòng, chuẩn bị vòng mới !!!!!`)
     return currentJob
 
   } catch (e) {
     console.log("Start Round Thất Bại, ", e);
     return []
   }
-  // await browser.close();
 };
 
 const logTime = () => {

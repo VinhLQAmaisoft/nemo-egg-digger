@@ -16,60 +16,41 @@ const logTime = () => {
 
 let nimoGifter: NimoGifter | null = null;
 
-let mainJobList: any = []
 const runSingleThread = async (index: number, username: string, password: string) => {
   let nimoGifter = new NimoGifter();
   await nimoGifter.init(username, password);
-  start1Round(index, nimoGifter).then(currentJob => {
-    mainJobList = mainJobList.concat(currentJob)
-  });
-  await nimoGifter.closeAllBrowers()
-
-
+  start1Round(index, nimoGifter)
 };
 
 
 const main = async () => {
   const MAX_ACCOUNT = process.env.MAX_ACCOUNT ? process.env.MAX_ACCOUNT : 2
   let threadList = []
-  // for (let i = 0; i < AccountList.length; i++) {
-  const account = AccountList[0]
-  // const account2 = AccountList[1]
-  // const account3 = AccountList[2]
-  while (true) {
+  for (let i = 0; i < AccountList.length; i++) {
+    const account = AccountList[i];
     try {
-      console.log(`${logTime()}vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv  Bắt đầu khởi tạo  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv`)
-
-      threadList.push(runSingleThread(1, account.username, account.password).catch((error) => {
-        console.log(`${logTime()} Luồng 1 thất bại`, error.message)
-      }));
-      // threadList.push(runSingleThread(2, account2.username, account2.password).catch((error) => {
-      //   console.log(`${logTime()} Luồng 2 thất bại`, error.message)
-      // }));
-      // threadList.push(runSingleThread(3, account3.username, account3.password).catch((error) => {
-      //   console.log(`${logTime()} Luồng 3 thất bại`, error.message)
-      // }));
-      if (threadList.length > MAX_ACCOUNT) {
+      if (threadList.length >= MAX_ACCOUNT) {
+        console.log("Số Tài Khoản Chạm Ngưỡng")
         await Promise.all(threadList)
         threadList = []
       }
-      // await sleep(5 * 60 * 1000)
-      // }
-      await Promise.all(threadList)
-      threadList = []
-      console.log(`${logTime()} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Kết thúc -> Chuẩn bị khởi tạo ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^`)
-
+      console.log(`${logTime()}__[${threadList.length}/${MAX_ACCOUNT}] Khởi tạo ${account.username}`)
+      threadList.push(
+        runSingleThread(1, account.username, account.password)
+          .then(() => { console.log(`${logTime()} ${account.username} Hoàn Thành`) })
+          .catch((error) => {
+            console.log(`${logTime()} ${account.username} thất bại:`, error.message)
+          }));
     } catch (error) {
+      await Promise.all(threadList)
       console.log(`${logTime()}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Vòng lặp thất bại !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`)
       console.log(error)
       console.log(`${logTime()}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`)
       await sleep(60000)
     }
   }
+  await Promise.all(threadList)
 }
-// const sleep = async (ms: number = 3000) => {
-//   await new Promise(r => setTimeout(r, ms));
-// }
 main()
 
 process.on('SIGINT', () => {
