@@ -19,7 +19,7 @@ let nimoGifter: NimoGifter | null = null;
 const runSingleThread = async (index: number, username: string, password: string) => {
   let nimoGifter = new NimoGifter();
   await nimoGifter.init(username, password);
-  start1Round(index, nimoGifter)
+  await start1Round(index, nimoGifter)
 };
 
 
@@ -30,17 +30,27 @@ const main = async () => {
     const account = AccountList[i];
     try {
       if (threadList.length >= MAX_ACCOUNT) {
-        console.log("Số Tài Khoản Chạm Ngưỡng")
-        await Promise.all(threadList)
-        threadList = []
+        console.log(`${logTime()}: Số Tài Khoản Chạm Ngưỡng`)
+        await Promise.all(threadList).then(() => {
+          console.log(`${logTime()}: Hêt Tài Khoản Chạm Ngưỡng`)
+          threadList = []
+        }
+        )
       }
-      console.log(`${logTime()}__[${threadList.length}/${MAX_ACCOUNT}] Khởi tạo ${account.username}`)
+      console.log(`${logTime()}__[${threadList.length + 1}/${MAX_ACCOUNT}]: Khởi tạo ${account.username}`)
       threadList.push(
-        runSingleThread(1, account.username, account.password)
-          .then(() => { console.log(`${logTime()} ${account.username} Hoàn Thành`) })
-          .catch((error) => {
-            console.log(`${logTime()} ${account.username} thất bại:`, error.message)
-          }));
+        runSingleThread(i + 1, account.username, account.password)
+          .then(
+            () => {
+              console.log(`${logTime()}__[${account.username}]: Hoàn Thành`)
+            }
+          )
+          .catch(
+            (error) => {
+              console.log(`${logTime()} ${account.username} thất bại:`, error.message)
+            }
+          )
+      );
     } catch (error) {
       await Promise.all(threadList)
       console.log(`${logTime()}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Vòng lặp thất bại !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`)
