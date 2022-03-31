@@ -22,7 +22,10 @@ const start1Round = async (index: number, nimoGifter: NimoGifter) => {
       }
     }
     console.log(`${logTime()} Hoàn thiện nốt các job ${currentJob.length}/${MAX_JOB}`)
-    await Promise.all(currentJob)
+    if(currentJob.length != 0){
+      await Promise.all(currentJob)
+    }
+    
     console.log(`${logTime()} Done 1 vòng`)
 
   } catch (e) {

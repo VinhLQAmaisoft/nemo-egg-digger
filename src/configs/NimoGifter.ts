@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from "puppeteer";
 import dotenv from 'dotenv';
 import AccountService from '../database/Service/AccountServices'
 import EvaluateFunction from './EvaluateFunction';
+import JobService from "src/database/Service/JobService";
 dotenv.config();
 
 const { HEADLESS } = process.env;
@@ -131,21 +132,24 @@ export class NimoGifter {
     //     }
     //   }
     // })
-    this.listIgnore.push(link);
+    // this.listIgnore.push(link);
     console.log(`[${index} - ${thread}] ${this.logTime()} Bắt đầu vòng 1 tại `, link)
     let evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
     let beforeEgg = evaluateEgg.eggLeft
     while (evaluateEgg.hasEgg && evaluateEgg.delayTime) {
       if (beforeEgg != evaluateEgg.eggLeft) {
-        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, evaluateEgg)
+        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `,link + " la : " , evaluateEgg)
       }
 
       await page.waitForTimeout(evaluateEgg.delayTime * 1000)
       // console.log("Bắt đầu vòng mới tại ", link)
       evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
     }
+
+    console.log("evaluateEgg: " ,evaluateEgg)
     // console.log("Kết quả vòng cuối ", evaluateEgg)
-    this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
+    // this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
+    JobService.clearJobList(link);
     await browser.close();
 
   }
