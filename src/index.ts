@@ -4,6 +4,7 @@ import { NimoGifter } from './configs/NimoGifter';
 // import JobService from './database/Service/JobService';
 import { start1Round } from './helpers/handleGift';
 const AccountList = require('../data/accountList.json')
+const fs = require('fs')
 dotenv.config();
 
 const logTime = () => {
@@ -14,12 +15,23 @@ const logTime = () => {
   return dateTime
 }
 
+const readFile =  () => {
+  var data = fs.readFileSync('./proxy.txt','utf-8');
+  var arr = data.split("\n");
+  let map = new Map();
+  for(let i=0;i<arr.length;i++){
+    var temp = arr[i].split("|");
+    map.set(temp[0],temp[1])
+  }
+  return map;
+}
+
 
 let nimoGifter: NimoGifter | null = null;
 
-const runSingleThread = async (index: number, username: string, password: string) => {
+const runSingleThread = async (index: number, username: string, password: string,proxy: string) => {
   let nimoGifter = new NimoGifter();
-  await nimoGifter.init(username, password);
+  await nimoGifter.init(username, password,proxy);
   await start1Round(index, nimoGifter)
 };
 
@@ -42,11 +54,19 @@ const sleep = async (ms: number = 3000) => {
   await new Promise(r => setTimeout(r, ms));
 }
 
-const createJob = async () => {
+const createJob = async (arrProxy: Map<string,string>) => {
   const MAX_ACCOUNT = process.env.MAX_ACCOUNT ? process.env.MAX_ACCOUNT : 2
+  
     let threadList = []
     for (let i = 0; i < AccountList.length; i++) {
       const account = AccountList[i];
+      var proxy = arrProxy.get(account.username)
+      
+      if(!proxy){
+        console.log("!!!!!!!!!!!Username ",account.username + " chua set up proxy !!!!!!!!!!!!!!!!")
+        continue;
+      } 
+
       try {
         if (threadList.length >= MAX_ACCOUNT) {
           console.log(`${logTime()}: Số Tài Khoản Chạm Ngưỡng: `, MAX_ACCOUNT)
@@ -58,7 +78,7 @@ const createJob = async () => {
         }
         console.log(`${logTime()}__[${threadList.length + 1}/${MAX_ACCOUNT}]: Khởi tạo ${account.username}`)
         threadList.push(
-          runSingleThread(i + 1, account.username, account.password)
+          runSingleThread(i + 1, account.username, account.password,proxy? proxy : "")
             .then(
               () => {
                 console.log(`${logTime()}__[${account.username}]: Hoàn Thành`)
@@ -82,7 +102,11 @@ const createJob = async () => {
 }
 
 const main = async (index: number) => {
-  createJob().then(
+  var arrProxy = readFile()
+  console.log("==================================Khoi tao proxy cho account==================================")
+  console.log(arrProxy)
+
+  createJob(arrProxy).then(
     () => {
       console.log("Start vong lap thứ ",index);
       index++;

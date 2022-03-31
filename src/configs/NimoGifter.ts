@@ -14,7 +14,8 @@ export class NimoGifter {
   mainPage: Page | null = null
   listIgnore: string[] = [];
   dataDir = './data';
-  init = async (username: string = '0387976385', password: string = 'pewpewabcabc111') => {
+  init = async (username: string = '0387976385', password: string = 'pewpewabcabc111', proxy: string) => {
+    let proxyServerString = "--proxy-server=" + proxy;
     this.browser = await puppeteer.launch({
       headless: HEADLESS == "true" ? true : false,
       handleSIGINT: true,
@@ -22,6 +23,9 @@ export class NimoGifter {
       handleSIGTERM: true,
       args: [
         '--window-size=1920,1080',
+        proxyServerString,
+        // Use proxy for localhost URLs
+        '--proxy-bypass-list=<-loopback>',
       ],
       // args: [
       //   '--no-sandbox',
