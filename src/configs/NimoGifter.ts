@@ -14,8 +14,8 @@ export class NimoGifter {
   mainPage: Page | null = null
   listIgnore: string[] = [];
   dataDir = './data';
-  init = async (username: string = '0387976385', password: string = 'pewpewabcabc111', proxy: string) => {
-    let proxyServerString = "--proxy-server=" + proxy;
+  init = async (username: string = '0387976385', password: string = 'pewpewabcabc111', proxy: any) => {
+    let authenArgs = proxy.host + ":" + proxy.port;
     this.browser = await puppeteer.launch({
       headless: HEADLESS == "true" ? true : false,
       handleSIGINT: true,
@@ -23,7 +23,7 @@ export class NimoGifter {
       handleSIGTERM: true,
       args: [
         '--window-size=1920,1080',
-        proxyServerString,
+        '--proxy-server='+authenArgs,
         // Use proxy for localhost URLs
         '--proxy-bypass-list=<-loopback>',
       ],
@@ -37,6 +37,11 @@ export class NimoGifter {
     });
     this.browers.push(this.browser);
     this.mainPage = await this.browser.newPage();
+    await this.mainPage.authenticate({
+      username: proxy.username,
+      password: proxy.password
+    })
+    
     await this.mainPage.setViewport({
       width: 1500,
       height: 1000
@@ -46,6 +51,7 @@ export class NimoGifter {
       this.mainPage.setCookie(cookie);
     }
     await this.mainPage.goto(this.DIRECT_URL) + '/game/185';
+    // await this.mainPage.goto("https://httpbin.org/ip")
     await this.login(username, password);
     // await this.autoScroll();
   }
@@ -90,10 +96,11 @@ export class NimoGifter {
     return dateTime
   }
 
-  takeGift = async (index: number, thread: number, link?: string) => {
+  takeGift = async (index: number, thread: number, proxy: any, link?: string) => {
     console.log(`[${index} - ${thread}] ${this.logTime()} Open New Tab: `, link)
     if (!link) return
     if (!this.browser) throw new Error('Not found browser');
+    let authenArgs = proxy.host + ":" + proxy.port;
     const cookies = await this.mainPage!.cookies();
     const browser = await puppeteer.launch({
       headless: HEADLESS == "true" ? true : false,
@@ -102,12 +109,19 @@ export class NimoGifter {
       handleSIGTERM: true,
       args: [
         '--window-size=1920,1080',
+        '--proxy-server='+authenArgs,
+         // Use proxy for localhost URLs
+         '--proxy-bypass-list=<-loopback>',
       ],
 
     });
     this.browers.push(browser);
     const [page] = await browser.pages();
     await page.setRequestInterception(true);
+    await page.authenticate({
+      username: proxy.username,
+      password: proxy.password
+    })
     page.on('request', (request) => {
       if (['image', 'font'].indexOf(request.resourceType()) !== -1) {
         request.abort();
@@ -142,7 +156,7 @@ export class NimoGifter {
     let beforeEgg = evaluateEgg.eggLeft
     while (evaluateEgg.hasEgg && evaluateEgg.delayTime) {
       if (beforeEgg != evaluateEgg.eggLeft) {
-        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `,link + " la : " , evaluateEgg)
+        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, link + " la : ", evaluateEgg)
       }
 
       await page.waitForTimeout(evaluateEgg.delayTime * 1000)
@@ -150,7 +164,7 @@ export class NimoGifter {
       evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
     }
 
-    console.log("evaluateEgg: " ,evaluateEgg)
+    console.log("evaluateEgg: ", evaluateEgg)
     // console.log("Kết quả vòng cuối ", evaluateEgg)
     // this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
     JobService.clearJobList(link);

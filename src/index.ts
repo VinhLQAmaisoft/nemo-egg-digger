@@ -20,8 +20,15 @@ const readFile =  () => {
   var arr = data.split("\n");
   let map = new Map();
   for(let i=0;i<arr.length;i++){
-    var temp = arr[i].split("|");
-    map.set(temp[0],temp[1])
+    var temp = arr[i].split(":");
+    var proxy = {
+      account: temp[0],
+      host: temp[1],
+      port: temp[2],
+      username: temp[3],
+      password: temp[4],
+    }
+    map.set(temp[0],proxy)
   }
   return map;
 }
@@ -29,10 +36,10 @@ const readFile =  () => {
 
 let nimoGifter: NimoGifter | null = null;
 
-const runSingleThread = async (index: number, username: string, password: string,proxy: string) => {
+const runSingleThread = async (index: number, username: string, password: string,proxy: any) => {
   let nimoGifter = new NimoGifter();
   await nimoGifter.init(username, password,proxy);
-  await start1Round(index, nimoGifter)
+  await start1Round(index, nimoGifter,proxy)
 };
 
 // const repeat = async (index: number, username: string, password: string) => {
@@ -54,7 +61,7 @@ const sleep = async (ms: number = 3000) => {
   await new Promise(r => setTimeout(r, ms));
 }
 
-const createJob = async (arrProxy: Map<string,string>) => {
+const createJob = async (arrProxy: Map<string,any>) => {
   const MAX_ACCOUNT = process.env.MAX_ACCOUNT ? process.env.MAX_ACCOUNT : 2
   
     let threadList = []
@@ -78,7 +85,7 @@ const createJob = async (arrProxy: Map<string,string>) => {
         }
         console.log(`${logTime()}__[${threadList.length + 1}/${MAX_ACCOUNT}]: Khởi tạo ${account.username}`)
         threadList.push(
-          runSingleThread(i + 1, account.username, account.password,proxy? proxy : "")
+          runSingleThread(i + 1, account.username, account.password,proxy)
             .then(
               () => {
                 console.log(`${logTime()}__[${account.username}]: Hoàn Thành`)
@@ -104,13 +111,12 @@ const createJob = async (arrProxy: Map<string,string>) => {
 const main = async (index: number) => {
   var arrProxy = readFile()
   console.log("==================================Khoi tao proxy cho account==================================")
-  console.log(arrProxy)
 
   createJob(arrProxy).then(
     () => {
+      sleep(10000);
       console.log("Start vong lap thứ ",index);
-      index++;
-      main(index);
+      main(++index);
     }
   );
 }

@@ -1,6 +1,6 @@
 import { NimoGifter } from "src/configs/NimoGifter";
 import JobService from "../database/Service/JobService";
-const start1Round = async (index: number, nimoGifter: NimoGifter) => {
+const start1Round = async (index: number, nimoGifter: NimoGifter, proxy: any) => {
   try {
     console.log(`${logTime()} Bắt đầu 1 vòng quét !!!!!`)
     let MAX_JOB = process.env.MAX_JOB ? process.env.MAX_JOB : 10
@@ -12,7 +12,7 @@ const start1Round = async (index: number, nimoGifter: NimoGifter) => {
     let thread = 1;
     for (let i = 0; i < listLink.length; i++) {
       const link = listLink[i];
-      currentJob.push(nimoGifter.takeGift(index, thread, link).catch(console.log))
+      currentJob.push(nimoGifter.takeGift(index, thread, proxy,link).catch(console.log))
       thread++
       await sleep(5000)
       if (currentJob.length >= MAX_JOB) {
