@@ -15,113 +15,70 @@ const logTime = () => {
   return dateTime
 }
 
-const readFile =  () => {
-  var data = fs.readFileSync('./proxy.txt','utf-8');
-  var arr = data.split("\n");
-  let map = new Map();
-  for(let i=0;i<arr.length;i++){
-    var temp = arr[i].split(":");
-    var proxy = {
-      account: temp[0],
-      host: temp[1],
-      port: temp[2],
-      username: temp[3],
-      password: temp[4],
-    }
-    map.set(temp[0],proxy)
-  }
-  return map;
-}
-
-
-let nimoGifter: NimoGifter | null = null;
-
-const runSingleThread = async (index: number, username: string, password: string,proxy: any) => {
-  let nimoGifter = new NimoGifter();
-  await nimoGifter.init(username, password,proxy);
-  await start1Round(index, nimoGifter,proxy)
-};
-
-// const repeat = async (index: number, username: string, password: string) => {
-// runSingleThread(index)
-// .then(
-//   () => {
-//     console.log(`${logTime()}__[${account.username}]: Hoàn Thành`)
-
-//   }
-// )
-// .catch(
-//   (error) => {
-//     console.log(`${logTime()} ${account.username} thất bại:`, error.message)
-//   }
-// )
-// }
-
 const sleep = async (ms: number = 3000) => {
   await new Promise(r => setTimeout(r, ms));
 }
 
-const createJob = async (arrProxy: Map<string,any>) => {
-  const MAX_ACCOUNT = process.env.MAX_ACCOUNT ? process.env.MAX_ACCOUNT : 2
-  
-    let threadList = []
-    for (let i = 0; i < AccountList.length; i++) {
-      const account = AccountList[i];
-      var proxy = arrProxy.get(account.username)
-      
-      if(!proxy){
-        console.log("!!!!!!!!!!!Username ",account.username + " chua set up proxy !!!!!!!!!!!!!!!!")
-        continue;
-      } 
-
-      try {
-        if (threadList.length >= MAX_ACCOUNT) {
-          console.log(`${logTime()}: Số Tài Khoản Chạm Ngưỡng: `, MAX_ACCOUNT)
-          await Promise.all(threadList).then(() => {
-            console.log(`${logTime()}: Hêt Tài Khoản Chạm Ngưỡng`)
-            threadList = []
-          }
-          )
-        }
-        console.log(`${logTime()}__[${threadList.length + 1}/${MAX_ACCOUNT}]: Khởi tạo ${account.username}`)
-        threadList.push(
-          runSingleThread(i + 1, account.username, account.password,proxy)
-            .then(
-              () => {
-                console.log(`${logTime()}__[${account.username}]: Hoàn Thành`)
-              }
-            )
-            .catch(
-              (error) => {
-                console.log(`${logTime()} ${account.username} thất bại:`, error.message)
-              }
-            )
-        );
-      } catch (error) {
-        await Promise.all(threadList)
-        console.log(`${logTime()}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Vòng lặp thất bại !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`)
-        console.log(error)
-        console.log(`${logTime()}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`)
-        await sleep(60000)
-      }
+const initProxy = () => {
+  let rawData = fs.readFileSync('./proxy.txt', 'utf-8');
+  let arrRawData = rawData.split("\r\n");
+  let proxyList = [];
+  for (let i = 0; i < arrRawData.length; i++) {
+    let temp = arrRawData[i].split(":");
+    let proxy = {
+      host: temp[0],
+      port: temp[1],
+      username: temp[2],
+      password: temp[3],
     }
-    await Promise.all(threadList)
+    proxyList.push(proxy)
+  }
+  return proxyList;
+}
+let nimoGifter: NimoGifter | null = null;
+
+const runSingleThread = async (index: number, username: string, password: string, proxy: any) => {
+  let nimoGifter = new NimoGifter();
+  try {
+    console.log(`${logTime()} [Thread ${index}] Init !!!`)
+    await nimoGifter.init(username, password, proxy)
+    console.log(`${logTime()} [Thread ${index}] Start !!!`)
+    await start1Round(index, nimoGifter, proxy)
+    console.log(`${logTime()} [Thread ${index}] Done !!!`)
+  }
+  catch (err: any) {
+    console.log(`Thread ${index} Sập:`, err.message)
+  }
+  await nimoGifter.closeAllBrowers()
+
+};
+
+const main = async () => {
+  var arrProxy = initProxy()
+  let maxAccount = process.env.MAX_ACCOUNT ? parseInt(process.env.MAX_ACCOUNT) : 1
+  let threadList = []
+  for await (const [index, account] of AccountList.entries()) {
+    threadList.push(
+      runSingleThread(index, account.username, account.password, arrProxy[index])
+        .catch(err => console.log(`Thread ${index} crashed with error:`, err.message))
+    )
+    await sleep(5000)
+    if (threadList.length >= maxAccount) {
+      console.log(`${logTime()} Đã chạy full luồng ${threadList.length}/${maxAccount}`)
+      await Promise.all(threadList).then(() => {
+        console.log(`${logTime()} Hoàn thành tất cả các luồng !!!!!`)
+
+        threadList = []
+      })
+    }
+  }
+  await Promise.all(threadList).then(() => {
+    threadList = []
+  })
+
 }
 
-const main = async (index: number) => {
-  var arrProxy = readFile()
-  console.log("==================================Khoi tao proxy cho account==================================")
-
-  createJob(arrProxy).then(
-    () => {
-      sleep(10000);
-      console.log("Start vong lap thứ ",index);
-      main(++index);
-    }
-  );
-}
-
-main(1)
+main()
 
 process.on('SIGINT', () => {
   console.log(`Process ${process.pid} has been interrupted`);

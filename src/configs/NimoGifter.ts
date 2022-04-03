@@ -6,6 +6,7 @@ import JobService from "src/database/Service/JobService";
 dotenv.config();
 
 const { HEADLESS } = process.env;
+const requestResourceType = ['image', 'font']
 export class NimoGifter {
   browers: Browser[] = [];
   browser: Browser | null = null;
@@ -37,6 +38,8 @@ export class NimoGifter {
     });
     this.browers.push(this.browser);
     this.mainPage = await this.browser.newPage();
+    this.mainPage.setDefaultNavigationTimeout(120000);
+
     await this.mainPage.authenticate({
       username: proxy.username,
       password: proxy.password
@@ -123,7 +126,7 @@ export class NimoGifter {
       password: proxy.password
     })
     page.on('request', (request) => {
-      if (['image', 'font'].indexOf(request.resourceType()) !== -1) {
+      if (requestResourceType.indexOf(request.resourceType()) !== -1) {
         request.abort();
       } else {
         request.continue();
@@ -136,24 +139,12 @@ export class NimoGifter {
       width: 1200,
       height: 800
     });
-    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(err => {
-      console.log("Login Fail: ", err.message);
-      browser.close()
+    page.setDefaultNavigationTimeout(120000);
+    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 120000 }).catch(async err => {
+      console.log("Navigation Fail: ", err.message);
+      await browser.close()
     });
     await page.waitForTimeout(25000);
-    // await page.evaluate(() => {
-    //   const listClass = [
-    //     'nimo-room__player__wrap',
-    //     'nimo-room-replay-tab',
-    //     'n-as-mrgh-xxs-back n-fx-bn'];
-    //   for (const className of listClass) {
-    //     const elements = document.getElementsByClassName(`${className}`);
-    //     for (const element of Array.from(elements)) {
-    //       element?.parentNode?.removeChild(element);
-    //     }
-    //   }
-    // })
-    // this.listIgnore.push(link);
     console.log(`[${index} - ${thread}] ${this.logTime()} Bắt đầu vòng 1 tại `, link)
     let evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
     let beforeEgg = evaluateEgg.eggLeft
@@ -161,16 +152,16 @@ export class NimoGifter {
       if (beforeEgg != evaluateEgg.eggLeft) {
         console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, link + " la : ", evaluateEgg)
       }
-
-      await page.waitForTimeout(evaluateEgg.delayTime * 1000)
-      // console.log("Bắt đầu vòng mới tại ", link)
-      evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
+      await page.waitForTimeout(evaluateEgg.delayTime * 1000 + 4000)
+      evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg)
+        .catch(err => {
+          console.log("Evaluate Egg Fail: ", err.message);
+          return { hasEgg: false, eggLeft: 0 }
+        });
     }
-
-    console.log("evaluateEgg: ", evaluateEgg)
-    // console.log("Kết quả vòng cuối ", evaluateEgg)
+    console.log("Kết quả vòng cuối ", evaluateEgg)
     // this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
-    JobService.clearJobList(link);
+    await JobService.clearJobList(link);
     await browser.close();
 
   }

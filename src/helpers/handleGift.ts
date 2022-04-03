@@ -12,7 +12,7 @@ const start1Round = async (index: number, nimoGifter: NimoGifter, proxy: any) =>
     let thread = 1;
     for (let i = 0; i < listLink.length; i++) {
       const link = listLink[i];
-      currentJob.push(nimoGifter.takeGift(index, thread, proxy,link).catch(console.log))
+      currentJob.push(nimoGifter.takeGift(index, thread, proxy, link).catch(console.log))
       thread++
       await sleep(5000)
       if (currentJob.length >= MAX_JOB) {
@@ -22,10 +22,7 @@ const start1Round = async (index: number, nimoGifter: NimoGifter, proxy: any) =>
       }
     }
     console.log(`${logTime()} Hoàn thiện nốt các job ${currentJob.length}/${MAX_JOB}`)
-    if(currentJob.length != 0){
-      await Promise.all(currentJob)
-    }
-    
+    await Promise.all(currentJob)
     console.log(`${logTime()} Done 1 vòng`)
 
   } catch (e) {

@@ -33,9 +33,9 @@ export default {
             if (openBtn != null) {
                 console.log("Step 3: Open Egg !!!",)
                 openBtn.click();
-                setTimeout(() => {
-                    location.reload();
-                }, 5000);
+                // setTimeout(() => {
+                //     location.reload();
+                // }, 5000);
                 eggLeft--
                 delayTime = 7
             }
