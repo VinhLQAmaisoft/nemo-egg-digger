@@ -23,7 +23,7 @@ export class NimoGifter {
       handleSIGTERM: true,
       args: [
         '--window-size=1920,1080',
-        '--proxy-server='+authenArgs,
+        '--proxy-server=' + authenArgs,
         // Use proxy for localhost URLs
         '--proxy-bypass-list=<-loopback>',
       ],
@@ -41,7 +41,7 @@ export class NimoGifter {
       username: proxy.username,
       password: proxy.password
     })
-    
+
     await this.mainPage.setViewport({
       width: 1500,
       height: 1000
@@ -109,9 +109,9 @@ export class NimoGifter {
       handleSIGTERM: true,
       args: [
         '--window-size=1920,1080',
-        '--proxy-server='+authenArgs,
-         // Use proxy for localhost URLs
-         '--proxy-bypass-list=<-loopback>',
+        '--proxy-server=' + authenArgs,
+        // Use proxy for localhost URLs
+        '--proxy-bypass-list=<-loopback>',
       ],
 
     });
@@ -136,7 +136,10 @@ export class NimoGifter {
       width: 1200,
       height: 800
     });
-    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(err => {
+      console.log("Login Fail: ", err.message);
+      browser.close()
+    });
     await page.waitForTimeout(25000);
     // await page.evaluate(() => {
     //   const listClass = [
