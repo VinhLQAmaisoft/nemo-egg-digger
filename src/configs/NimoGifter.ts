@@ -100,9 +100,14 @@ export class NimoGifter {
   }
 
   takeGift = async (index: number, thread: number, proxy: any, link?: string) => {
+    let MAX_JOB = parseInt(process.env.MAX_JOB ? process.env.MAX_JOB : '10') + 1;
     console.log(`[${index} - ${thread}] ${this.logTime()} Open New Tab: `, link)
     if (!link) return
     if (!this.browser) throw new Error('Not found browser');
+    if (this.browers.length > MAX_JOB) {
+      console.log(`Đang Bật Quá Nhiều Trình Duyệt (${this.browers.length}/${MAX_JOB})!!!!`)
+      return
+    }
     let authenArgs = proxy.host + ":" + proxy.port;
     const cookies = await this.mainPage!.cookies();
     const browser = await puppeteer.launch({
@@ -140,29 +145,34 @@ export class NimoGifter {
       height: 800
     });
     page.setDefaultNavigationTimeout(120000);
-    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 120000 }).catch(async err => {
-      console.log("Navigation Fail: ", err.message);
-      await browser.close()
-    });
-    await page.waitForTimeout(25000);
-    console.log(`[${index} - ${thread}] ${this.logTime()} Bắt đầu vòng 1 tại `, link)
-    let evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
-    let beforeEgg = evaluateEgg.eggLeft
-    while (evaluateEgg.hasEgg && evaluateEgg.delayTime) {
-      if (beforeEgg != evaluateEgg.eggLeft) {
-        console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, link + " la : ", evaluateEgg)
+    await page.goto(`${link}`, { waitUntil: 'domcontentloaded', timeout: 120000 }).then(async () => {
+      await page.waitForTimeout(25000);
+      console.log(`[${index} - ${thread}] ${this.logTime()} Bắt đầu vòng 1 tại `, link)
+      let isError = await page.evaluate(EvaluateFunction.isServerError);
+      if (!isError) {
+        let evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg);
+        let beforeEgg = evaluateEgg.eggLeft
+        while (evaluateEgg.hasEgg && evaluateEgg.delayTime) {
+          if (beforeEgg != evaluateEgg.eggLeft) {
+            console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, link + " la : ", evaluateEgg)
+          }
+          await page.waitForTimeout(evaluateEgg.delayTime * 1000 + 4000)
+          evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg)
+            .catch(err => {
+              console.log("Evaluate Egg Fail: ", err.message);
+              return { hasEgg: false, eggLeft: 0 }
+            });
+        }
+        console.log("Kết quả vòng cuối ", evaluateEgg)
+        // this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
+        await JobService.clearJobList(link);
       }
-      await page.waitForTimeout(evaluateEgg.delayTime * 1000 + 4000)
-      evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg)
-        .catch(err => {
-          console.log("Evaluate Egg Fail: ", err.message);
-          return { hasEgg: false, eggLeft: 0 }
-        });
-    }
-    console.log("Kết quả vòng cuối ", evaluateEgg)
-    // this.listIgnore.splice(this.listIgnore.indexOf(link), 1);
-    await JobService.clearJobList(link);
+    }).catch(async err => {
+      console.log(`${this.logTime()} Navigation Fail: `, err.message);
+    });
     await browser.close();
+    this.browers.splice(this.browers.indexOf(browser), 1)
+    return
 
   }
 

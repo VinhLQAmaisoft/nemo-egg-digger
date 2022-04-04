@@ -5,20 +5,42 @@ const start1Round = async (index: number, nimoGifter: NimoGifter, proxy: any) =>
     console.log(`${logTime()} Bắt đầu 1 vòng quét !!!!!`)
     let MAX_JOB = process.env.MAX_JOB ? process.env.MAX_JOB : 10
     const listLink: any = [];
-    let currentJob: any = []
-    const availableJob = await JobService.getAvailableJob();
-    availableJob.forEach(job => { listLink.push(job.channel) })
-    console.log(`${logTime()}:Job Found: `, listLink.length)
-    let thread = 1;
-    for (let i = 0; i < listLink.length; i++) {
-      const link = listLink[i];
-      currentJob.push(nimoGifter.takeGift(index, thread, proxy, link).catch(console.log))
-      thread++
-      await sleep(5000)
-      if (currentJob.length >= MAX_JOB) {
-        console.log(`${logTime()} Đạt số job tối đa/account  ${currentJob.length}/${MAX_JOB}`)
-        await Promise.all(currentJob)
-        currentJob = []
+    let currentJob: any = [];
+    let ignoreList: any = [];
+    while (true) {
+      const availableJob = await JobService.getAvailableJob();
+      availableJob.forEach(job => {
+        if (!ignoreList.includes(job.channel)) {
+          listLink.push(job.channel)
+        }
+      })
+      console.log(`${logTime()}:Job Found: `, listLink.length)
+      let thread = 0;
+      for (let i = 0; i < listLink.length; i++) {
+        const link = listLink[i];
+        if (thread >= MAX_JOB || ignoreList.length >= MAX_JOB) {
+          console.log(`${logTime()} Đạt số job tối đa/account  ${thread}/${MAX_JOB}`)
+        }
+        while (thread >= MAX_JOB || ignoreList.length >= MAX_JOB) {
+          console.log(`${logTime()} Đợi hoàn thành job!!  ${thread}/${MAX_JOB}`)
+          await sleep(5000)
+        }
+        thread++;
+        ignoreList.push(link)
+        nimoGifter.takeGift(index, thread, proxy, link)
+          .then(() => {
+            console.log(`[Luồng ${index} - Tab ${thread}] Hoàn thành: `)
+            --thread;
+            ignoreList.splice(ignoreList.indexOf(link), 1)
+          })
+          .catch(err => {
+            console.log(`[Luồng ${index} - Tab ${thread}] thất bại: `, err.message)
+            --thread;
+            ignoreList.splice(ignoreList.indexOf(link), 1)
+          })
+
+        await sleep(5000)
+
       }
     }
     console.log(`${logTime()} Hoàn thiện nốt các job ${currentJob.length}/${MAX_JOB}`)

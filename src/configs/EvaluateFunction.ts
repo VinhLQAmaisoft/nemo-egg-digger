@@ -14,6 +14,15 @@ export default {
 
         }
     },
+    isServerError: () => {
+        let dom = document.querySelector("body > div > div")
+        if (dom) {
+            if (dom.innerHTML == 'Service Error')
+                return true
+        }
+        return false;
+    }
+    ,
     handleOpenEgg: () => {
         try {
             console.log("Evaluate Egg")
