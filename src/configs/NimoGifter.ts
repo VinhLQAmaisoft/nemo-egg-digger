@@ -157,7 +157,7 @@ export class NimoGifter {
             console.log(`[${index} - ${thread}] ${this.logTime()} Kết quả vòng trước `, link + " la : ", evaluateEgg)
           }
           await page.waitForTimeout(evaluateEgg.delayTime * 1000 + 4000)
-          evaluateEgg = await page.evaluate(EvaluateFunction.handleOpenEgg)
+          evaluateEgg = await this.earnEgg(page)
             .catch(err => {
               console.log("Evaluate Egg Fail: ", err.message);
               return { hasEgg: false, eggLeft: 0 }
@@ -174,6 +174,50 @@ export class NimoGifter {
     this.browers.splice(this.browers.indexOf(browser), 1)
     return
 
+  }
+
+  earnEgg = async (page: Page) => {
+    try {
+      console.log("Evaluate Egg")
+      const boxGift = page.$('.nimo-room__chatroom__box-gift-item');
+      console.log("Step 1: Have Egg = ", boxGift)
+      let delayTime = 5
+      if (!boxGift) {
+        return {
+          hasEgg: false,
+          eggLeft: 0
+        }
+      }
+      let quantityDom = await page.$('.nimo-room__chatroom__box-gift-item .nimo-box-gift .nimo-box-gift__box .nimo-badge .nimo-scroll-number');
+      let eggLeft = 1;
+      if (quantityDom) {
+         const qT = await quantityDom.evaluate(node => node.innerText);
+        eggLeft = parseInt(qT);
+      }
+      console.log("Step 2: Count Egg = ", eggLeft);
+      const giftBtnSelector = '.nimo-room__chatroom__box-gift-item  .nimo-box-gift  .nimo-box-gift__box  .nimo-box-gift__box__btn';
+      await page.waitForSelector(giftBtnSelector)
+      let openBtn = await page.$(giftBtnSelector);
+      if (openBtn !== null) {
+        console.log("Step 3: Open Egg !!!",)
+        openBtn.click();
+        eggLeft--
+        delayTime = 7
+      }
+      console.log("Step 4: Wait For Egg = ", delayTime * 1000)
+      return {
+        hasEgg: eggLeft > 0,
+        eggLeft: eggLeft,
+        delayTime
+      }
+    } catch (error) {
+      console.log("Evaluate Time 2 Close Thất bại", error)
+      return {
+        hasEgg: false,
+        eggLeft: 0,
+        delayTime: 5
+      }
+    }
   }
 
 
